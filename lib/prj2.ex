@@ -20,7 +20,11 @@ defmodule PRJ2.Main do
 
   def init_state(inputs) do
     noOfNodes = elem(inputs,0) || 5
+<<<<<<< Updated upstream
     nodes = {}
+=======
+    nodes = []
+>>>>>>> Stashed changes
     completedNodes = %{}
     {noOfNodes, nodes, completedNodes}
   end
@@ -31,12 +35,12 @@ defmodule PRJ2.Main do
 
   def startNode(acc) do
     newNode = PRJ2.Noded.start_link([])
-    Tuple.append(acc,elem(newNode,1))
+    elem(newNode,1)
   end
 
   def createNodes(noOfNodes) do
     list = 0..(noOfNodes - 1)
-    Enum.reduce(list,{}, fn n,acc ->  startNode(acc) end)
+    Enum.map(list, fn n ->  startNode() end)
   end
 
   def findNeighbours(index, nodes, topology,noOfNodes) do
@@ -50,6 +54,9 @@ defmodule PRJ2.Main do
           true ->
             [elem(nodes,index+1),elem(nodes,index-1)]
           end
+          "full" ->
+            Lists.delete_at(nodes,index)
+          
     end
   end
 
