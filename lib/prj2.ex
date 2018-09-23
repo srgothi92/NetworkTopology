@@ -34,15 +34,23 @@ defmodule PRJ2.Main do
     Enum.reduce(list,{}, fn n,acc ->  startNode(acc) end)
   end
 
-  def findNeighbours(index, nodes, topology) do
+  def findNeighbours(index, nodes, topology,noOfNodes) do
     case topology do
-      "line" -> [elem(nodes, index + 1)]
+      "line" -> 
+        cond do 
+          index==0 ->
+            [elem(nodes, index + 1)]
+          index==noOfNodes ->
+            [elem(nodes, index - 1)]
+          true ->
+            [elem(nodes,index+1),elem(nodes,index-1)]
+          end
     end
   end
 
   def handle_cast({:startGossip, msg}, {noOfNodes, _}) do
     nodes = createNodes(noOfNodes)
-    Enum.each(0..(noOfNodes - 2), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line")}) end)
+    Enum.each(0..(noOfNodes - 2), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes)}) end)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
     IO.inspect randNodeIndex
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, "Su is too scared of ghost, and she won't sleep for 7 days alone."})
