@@ -5,8 +5,12 @@ defmodule PRJ2.Main do
   Documentation for PRJ2.
   """
 
-  def start_link(opts, noOfNodes) do
-    GenServer.start_link(__MODULE__,{opts,noOfNodes}, opts)
+  def start_link(noOfNodes) do
+    GenServer.start_link(__MODULE__,{noOfNodes},name: :genMain)
+  end
+
+  def getMain do
+    self()
   end
 
   def init(inputs) do
@@ -15,9 +19,10 @@ defmodule PRJ2.Main do
   end
 
   def init_state(inputs) do
-    noOfNodes = elem(inputs,1) || 5
+    noOfNodes = elem(inputs,0) || 5
     nodes = {}
-    {noOfNodes, nodes}
+    completedNodes = %{}
+    {noOfNodes, nodes, completedNodes}
   end
 
   def handle_call({:updateNodes, nodes}, _from, {noOfNodes, _}) do
@@ -36,11 +41,11 @@ defmodule PRJ2.Main do
 
   def findNeighbours(index, nodes, topology,noOfNodes) do
     case topology do
-      "line" -> 
-        cond do 
+      "line" ->
+        cond do
           index==0 ->
             [elem(nodes, index + 1)]
-          index==noOfNodes ->
+          index==(noOfNodes - 1) ->
             [elem(nodes, index - 1)]
           true ->
             [elem(nodes,index+1),elem(nodes,index-1)]
@@ -48,12 +53,25 @@ defmodule PRJ2.Main do
     end
   end
 
-  def handle_cast({:startGossip, msg}, {noOfNodes, _}) do
+  def handle_cast({:startGossip, msg}, {noOfNodes, _, completedNodes}) do
     nodes = createNodes(noOfNodes)
-    Enum.each(0..(noOfNodes - 2), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes)}) end)
+    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes)}) end)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
     IO.inspect randNodeIndex
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, "Su is too scared of ghost, and she won't sleep for 7 days alone."})
-    {:noreply, {noOfNodes, nodes}}
+    {:noreply, {noOfNodes, nodes, completedNodes}}
+  end
+
+  def handle_cast({:notify, nodePId}, {noOfNodes, nodes, completedNodes}) do
+    completedNodes = Map.put(completedNodes,nodePId,true)
+    IO.inspect(completedNodes)
+    if map_size(completedNodes) == noOfNodes do
+      IO.inspect "Convergance"
+    end
+    {:noreply,{noOfNodes, nodes, completedNodes} }
+  end
+
+  def handle_call(:getstate,_from,state) do
+    {:reply,state,state}
   end
 end
