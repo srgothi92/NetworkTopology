@@ -13,7 +13,25 @@ defmodule PRJ2.Noded do
   def init_state() do 
       s = 0
       w = 0
-      neighbours = {}
+      neighbours = []
       {s,w,neighbours}
   end
+ 
+  def handle_cast({:updateNeighbours,newNeighbour},{s,w,_}) do
+    {:noreply,{s,w,newNeighbour}}
+  end
+
+  def handle_cast({:transmitMessage,message},{s,w,neighbours}) do 
+
+    w =if w<10 do
+        Enum.each(neighbours, fn(x) -> GenServer.cast(x,{:transmitMessage,message}) end)
+        w+1
+    end
+    {:noreply,{s,w,neighbours}}
+  end
+
+  def handle_call(:getstate,_from,state) do
+    {:reply,state,state}
+  end
+
 end
