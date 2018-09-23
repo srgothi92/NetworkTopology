@@ -20,11 +20,7 @@ defmodule PRJ2.Main do
 
   def init_state(inputs) do
     noOfNodes = elem(inputs,0) || 5
-<<<<<<< Updated upstream
-    nodes = {}
-=======
     nodes = []
->>>>>>> Stashed changes
     completedNodes = %{}
     {noOfNodes, nodes, completedNodes}
   end
