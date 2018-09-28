@@ -30,23 +30,7 @@ defmodule PRJ2.Main do
     {:reply, {noOfNodes, nodes}}
   end
 
-<<<<<<< Updated upstream
-  def startNode(acc) do
-    newNode = PRJ2.Noded.start_link([])
-    elem(newNode,1)
-  end
-
-  def createNodes(noOfNodes) do
-    list = 0..(noOfNodes - 1)
-    Enum.map(list, fn n ->  startNode() end)
-  end
-
-
-
-  def findNeighbours(index, nodes, topology,noOfNodes, nodeCoordinates) do
-=======
-  def findNeighbours(index, nodes, topology,noOfNodes) do
->>>>>>> Stashed changes
+  def findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
     case topology do
       "line" ->
         cond do
@@ -57,22 +41,23 @@ defmodule PRJ2.Main do
           true ->
             [elem(nodes,index+1),elem(nodes,index-1)]
           end
-          "full" ->
-            Lists.delete_at(nodes,index)
-          "rand2d" ->
-            currentNodeCoordinate = Enum.at(nodeCoordinates,index)
-            neighbours = Enum.reduce(nodeCoordinates, {0,[]}, fn coordinate,acc ->
-            dist = math.sqrt(math.pow(elem(currentnode,1) - elem(coordinate,1)) + math.pow(elem(currentnode,0) - elem(coordinate,0)));
-            index = elem(acc,0)
-            neighbour = elem(acc,1)
-            neighbour = if dist<0.1 do
-               [elem(node,)] + neighbour
-            else
-              neighbour
-            end
-            {index +1, neighbour}}
-            elem(neighbours,1)
-    end
+      "full" ->
+        Lists.delete_at(nodes,index)
+      "rand2d" ->
+        currentNodeCoordinate = Enum.at(nodeCoordinates,index)
+        neighbours = Enum.reduce(nodeCoordinates, {0,[]}, fn coordinate,acc ->
+          dist = :math.sqrt(:math.pow(elem(currentNodeCoordinate,1) - elem(currentNodeCoordinate,1)) + :math.pow(elem(currentNodeCoordinate,0) - elem(coordinate,0)));
+          index = elem(acc,0)
+          neighbour = elem(acc,1)
+          neighbour = if dist<0.1 do
+            neighbour ++ [elem(node,index)]
+          else
+            neighbour
+          end
+          acc = {index+1,neighbour}
+        end)
+        elem(neighbours,1)
+      end
   end
 
   def startNodeGossip(acc) do
@@ -89,9 +74,9 @@ defmodule PRJ2.Main do
     nodes = createNodesGossip(noOfNodes)
     topology = "rand2d";
     nodeCoordinates = if topology == "rand2d" do
-      Enum.reduce(0..noOfNodes, [],fn index,acc -> acc = [{rand.uniform(),rand.uniform()}] ++ acc end)
+      Enum.reduce(0..noOfNodes, [],fn index,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
     end
-    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, topology ,noOfNodes)}) end)
+    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, topology ,noOfNodes,nodeCoordinates)}) end)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
     IO.inspect nodes
     IO.inspect randNodeIndex
@@ -111,7 +96,11 @@ defmodule PRJ2.Main do
 
   def handle_cast({:startPushSum, s, w}, {noOfNodes, _, completedNodes}) do
     nodes = createNodesPushSum(noOfNodes)
-    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes)}) end)
+    topology = "rand2d";
+    nodeCoordinates = if topology == "rand2d" do
+      Enum.reduce(0..noOfNodes, [],fn index,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
+    end
+    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes,nodeCoordinates)}) end)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
     IO.inspect randNodeIndex
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitSum, {s, w}})
