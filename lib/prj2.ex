@@ -39,7 +39,9 @@ defmodule PRJ2.Main do
     Enum.map(list, fn n ->  startNode() end)
   end
 
-  def findNeighbours(index, nodes, topology,noOfNodes) do
+
+
+  def findNeighbours(index, nodes, topology,noOfNodes, nodeCoordinates) do
     case topology do
       "line" ->
         cond do
@@ -52,13 +54,29 @@ defmodule PRJ2.Main do
           end
           "full" ->
             Lists.delete_at(nodes,index)
-          
+          "rand2d" ->
+            currentNodeCoordinate = Enum.at(nodeCoordinates,index)
+            neighbours = Enum.reduce(nodeCoordinates, {0,[]}, fn coordinate,acc ->   
+            dist = math.sqrt(math.pow(elem(currentnode,1) - elem(coordinate,1)) + math.pow(elem(currentnode,0) - elem(coordinate,0)));
+            index = elem(acc,0)
+            neighbour = elem(acc,1)
+            neighbour = if dist<0.1 do
+               [elem(node,)] + neighbour
+            else
+              neighbour
+            end
+            {index +1, neighbour}}
+            elem(neighbours,1)
     end
   end
 
   def handle_cast({:startGossip, msg}, {noOfNodes, _, completedNodes}) do
     nodes = createNodes(noOfNodes)
-    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "line",noOfNodes)}) end)
+    topology = "rand2d";
+    nodeCoordinates = if topology == "rand2d" do
+      Enum.reduce(0..noOfNodes, [],fn index,acc -> acc = [{rand.uniform(),rand.uniform()}] ++ acc end)
+    end
+    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, topology ,noOfNodes)}) end)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
     IO.inspect randNodeIndex
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, "Su is too scared of ghost, and she won't sleep for 7 days alone."})
