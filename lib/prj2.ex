@@ -116,12 +116,20 @@ defmodule PRJ2.Main do
     {:noreply,{noOfNodes, nodes, completedNodes} }
   end
 
-  def handle_call(:getstate,_from,state) do
-    {:reply,state,state}
+  def handle_call({:terminatePushSum, avg}, _, {noOfNodes, nodes, completedNodes}) do
+    stopNodes(nodes, 0, noOfNodes)
+    Logger.info("PushSum algorithm completed with average value #{inspect(avg)}")
+    {:noreply,{noOfNodes, nodes, completedNodes} }
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    Logger.info("fdfew")
-    {:noreply, state}
+  def stopNodes(nodes, index, size) do
+    if index != size-1 do
+      GenServer.stop(elem(nodes,index),"Converged")
+      stopNodes(nodes, index+1, size)
+    end
+  end
+
+  def handle_call(:getstate,_from,state) do
+    {:reply,state,state}
   end
 end

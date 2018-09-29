@@ -27,11 +27,13 @@ defmodule PRJ2.NodePushSum do
     newS = s + incomingS
     newW = w + incomingW
     delta = abs(newS/newW - (s/w))
-    Logger.info("delta #{inspect(delta)}")
+    IO.inspect delta
+    # Logger.info("delta #{inspect(delta)}")
     if(delta < :math.pow(10,-10) && count>=3) do
-      Logger.info("Node Converged #{inspect(self())}")
-      GenServer.cast(:genMain, {:notify, self()})
-      {:stop, "Node Converged", {s,w,neighbours, count}}
+      # Logger.info("Node Converged #{inspect(self())}")
+      GenServer.call(:genMain, {:terminatePushSum, s/w})
+      # :init.stop()
+      # //{:stop, "Node Converged", {s,w,neighbours, count}}
       # System.stop(0)
       # GenServer.stop(self(), "Node Converged")
     end
