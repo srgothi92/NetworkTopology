@@ -31,7 +31,7 @@ defmodule PRJ2.Main do
   end
 
   def findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
-    su = case topology do
+    case topology do
       "line" ->
         cond do
           index==0 ->
@@ -60,9 +60,6 @@ defmodule PRJ2.Main do
         elem(neighbours,1)
       
       end
-      IO.inspect su
-      su
-
   end
 
   def startNodeGossip(acc) do
