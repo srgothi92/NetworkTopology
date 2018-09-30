@@ -7,8 +7,8 @@ defmodule PRJ2.Main do
   Documentation for PRJ2.
   """
 
-  def start_link(topology, noOfNodes) do
-    GenServer.start_link(__MODULE__,{topology, noOfNodes},name: :genMain)
+  def start_link(topology, noOfNodes, bonus \\ false) do
+    GenServer.start_link(__MODULE__, {topology, noOfNodes, bonus}, name: :genMain)
   end
 
   def init(inputs) do
@@ -17,12 +17,133 @@ defmodule PRJ2.Main do
   end
 
   defp init_state(inputs) do
-    topology = elem(inputs,0) || "full"
-    noOfNodes = elem(inputs,1) || 5
+    topology = elem(inputs, 0) || "full"
+    noOfNodes = elem(inputs, 1) || 5
     nodes = {}
+    bonus = elem(inputs, 2)
     completedNodes = %{}
     startTime = 0
     {topology, noOfNodes, nodes, completedNodes, startTime}
+  end
+
+  defp nodeMatrixFor3d(first, last, size, nodes, acc, n) when last < n * size * size do
+    vec =
+      Enum.reduce(first..last, [], fn index, vector ->
+        vector = vector ++ [elem(nodes, index)]
+      end)
+
+    acc = acc ++ [vec]
+    first = last + 1
+    last = last + size
+    nodeMatrixFor3d(first, last, size, nodes, acc, n)
+  end
+
+  defp nodeMatrixFor3d(_, _, _, _, acc, _) do
+    acc
+  end
+
+  defp combinedMatrixFor3d(size, nodes) do
+    Enum.reduce(0..(size - 1), [], fn index, tensor3d ->
+      first = index * size * size
+      last = first + (size - 1)
+      tensor3d = tensor3d ++ [nodeMatrixFor3d(first, last, size, nodes, [], index + 1)]
+    end)
+  end
+
+  defp preprocessing(noOfNodes, nodes, topology) do
+    case topology do
+      "rand2d" ->
+        nodePositions =
+          Enum.reduce(0..(noOfNodes - 1), [], fn _, acc ->
+            acc = [{:rand.uniform(), :rand.uniform()}] ++ acc
+          end)
+
+        {nodePositions, noOfNodes}
+
+      "3dGrid" ->
+        size = Kernel.trunc(:math.pow(26, 1 / 3))
+        nodePositions = Tensor.new(combinedMatrixFor3d(size, nodes))
+        {nodePositions, size * size * size}
+
+      "sphere" ->
+        size = Kernel.trunc(:math.sqrt(noOfNodes))
+
+        nodePositions =
+          Enum.reduce(0..(size - 1), {}, fn i, acc ->
+            Tuple.append(acc, sphereColumn(nodes, i * size, size))
+          end)
+
+        {nodePositions, size * size}
+
+      _ ->
+        {[], noOfNodes}
+    end
+  end
+
+  defp findNeighbours(index, nodes, topology, noOfNodes, nodeCoordinates) do
+    IO.inspect topology
+    su = case topology do
+      "line" ->
+        cond do
+          index == 0 ->
+            [elem(nodes, index + 1)]
+
+          index == noOfNodes - 1 ->
+            [elem(nodes, index - 1)]
+
+          true ->
+            [elem(nodes, index + 1), elem(nodes, index - 1)]
+        end
+
+      "full" ->
+        nodeList = Tuple.to_list(nodes)
+        List.delete_at(nodeList, index)
+
+      "rand2d" ->
+        currentNodeCoordinate = Enum.at(nodeCoordinates, index)
+
+        neighbours =
+          Enum.reduce(nodeCoordinates, {0, []}, fn iteratingNode, acc ->
+            dist =
+              :math.sqrt(
+                :math.pow(elem(currentNodeCoordinate, 1) - elem(iteratingNode, 1), 2) +
+                  :math.pow(elem(currentNodeCoordinate, 0) - elem(iteratingNode, 0), 2)
+              )
+
+            index = elem(acc, 0)
+            listNeigh = elem(acc, 1)
+
+            listNeigh =
+              if dist < 0.1 do
+                listNeigh ++ [elem(nodes, index)]
+              else
+                listNeigh
+              end
+
+            acc = {index + 1, listNeigh}
+          end)
+
+        elem(neighbours, 1)
+
+      "impline" ->
+        index1 = :rand.uniform(noOfNodes) - 1
+        [elem(nodes, index1)]
+
+      "3dGrid" ->
+        []
+
+      "sphere" ->
+        neighbours = []
+        size = Kernel.trunc(:math.sqrt(noOfNodes))
+        row = div(index, size)
+        col = rem(index, size)
+        neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row+size-1,size)), col)]
+        neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col+size-1,size))]
+        neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row + 1, size)), col)]
+        neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col + 1, size))]
+        neighbours
+    end
+    IO.inspect su
   end
 
   defp createTopology(topology, noOfNodes, nodes, algorithm) do
@@ -30,78 +151,52 @@ defmodule PRJ2.Main do
     if tuple_size(nodes) > 0 do
       stopNodes(nodes, 0, noOfNodes)
     end
+
     nodes = {}
-    nodes = if algorithm == "Gossip" do
-      createNodesGossip(noOfNodes)
-    else
-      createNodesPushSum(noOfNodes)
-    end
-    nodeCoordinates = preprocessing(noOfNodes,nodes, topology)
-    _ = Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "full",noOfNodes,nodeCoordinates)}) end)
-    nodes
-  end
 
-  defp findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
-    case topology do
-      "line" ->
-        cond do
-          index==0 ->
-            [elem(nodes, index + 1)]
-          index==(noOfNodes - 1) ->
-            [elem(nodes, index - 1)]
-          true ->
-            [elem(nodes,index+1),elem(nodes,index-1)]
-          end
-      "full" ->
-        nodeList = Tuple.to_list(nodes)
-        List.delete_at(nodeList,index)
-      "rand2d" ->
-        currentNodeCoordinate = Enum.at(nodeCoordinates,index)
-        neighbours = Enum.reduce(nodeCoordinates, {0,[]}, fn iteratingNode,acc ->
-          dist = :math.sqrt(:math.pow((elem(currentNodeCoordinate,1) - elem(iteratingNode,1)),2) + :math.pow((elem(currentNodeCoordinate,0) - elem(iteratingNode,0)),2));
-          index = elem(acc,0)
-          listNeigh = elem(acc,1)
-          listNeigh = if dist<0.1 do
-            listNeigh ++ [elem(nodes,index)]
-          else
-            listNeigh
-          end
-          acc = {index+1,listNeigh}
-        end)
-        elem(neighbours,1)
-      "impline" ->
-        index1 = :rand.uniform(noOfNodes)-1
-        [elem(nodes,index1)]
-      "3dGrid" ->
-        Graphmath.Vec3.create()
-
+    nodes =
+      if algorithm == "Gossip" do
+        createNodesGossip(noOfNodes)
+      else
+        createNodesPushSum(noOfNodes)
       end
+
+    data = preprocessing(noOfNodes, nodes, topology)
+    nodePositions = elem(data, 0)
+    noOfNodes = elem(data, 1)
+    IO.inspect nodePositions
+    _ =
+      Enum.each(0..(noOfNodes - 1), fn index ->
+        GenServer.cast(
+          elem(nodes, index),
+          {:updateNeighbours, findNeighbours(index, nodes, topology, noOfNodes, nodePositions)}
+        )
+      end)
+
+    {nodes, noOfNodes}
   end
 
   defp startNodeGossip(acc) do
     newNode = PRJ2.NodeGossip.start_link({[]})
-    Tuple.append(acc,elem(newNode,1))
+    Tuple.append(acc, elem(newNode, 1))
   end
 
   defp createNodesGossip(noOfNodes) do
     list = 0..(noOfNodes - 1)
-    Enum.reduce(list,{}, fn _,acc ->  startNodeGossip(acc) end)
+    Enum.reduce(list, {}, fn _, acc -> startNodeGossip(acc) end)
   end
 
-  defp preprocessing(noOfNodes,nodes, topology) do
-    case topology do
-      "rand2d" ->
-        Enum.reduce(0..(noOfNodes-1), [],fn _,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
-      "3dGrid" ->
-        Tensor.new(combinedMatrixFor3d(2,nodes))
-      _ ->
-          []
-    end
+  defp sphereColumn(nodes, index, size) do
+    Enum.reduce(index..(index + size - 1), {}, fn i, acc ->
+      acc = Tuple.append(acc, elem(nodes, i))
+    end)
   end
 
   def handle_cast({:startGossip, msg}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
-    nodes = createTopology(topology, noOfNodes, nodes, "Gossip")
+    topologyData = createTopology(topology, noOfNodes, nodes, "Gossip")
+    nodes = elem(topologyData,0)
+    noOfNodes = elem(topologyData,1)
     topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
     Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
     startGossip = System.monotonic_time(:microsecond)
@@ -112,17 +207,19 @@ defmodule PRJ2.Main do
 
   def startNodePushSum(acc, index) do
     newNode = PRJ2.NodePushSum.start_link({index + 1, 1})
-    Tuple.append(acc,elem(newNode,1))
+    Tuple.append(acc, elem(newNode, 1))
   end
 
   def createNodesPushSum(noOfNodes) do
     list = 0..(noOfNodes - 1)
-    Enum.reduce(list,{}, fn n,acc ->  startNodePushSum(acc, n) end)
+    Enum.reduce(list, {}, fn n, acc -> startNodePushSum(acc, n) end)
   end
 
   def handle_cast({:startPushSum, s, w}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
-    nodes = createTopology(topology, noOfNodes, nodes, "PushSum")
+    topologyData = createTopology(topology, noOfNodes, nodes, "PushSum")
+    nodes = elem(topologyData,0)
+    noOfNodes = elem(topologyData,1)
     topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
     Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
     startTimePushSum = System.monotonic_time(:microsecond)
@@ -132,58 +229,48 @@ defmodule PRJ2.Main do
   end
 
   def handle_cast({:notify, nodePid}, {topology, noOfNodes, nodes, completedNodes, startTime}) do
-    completedNodes = Map.put(completedNodes,nodePid,true)
+    completedNodes = Map.put(completedNodes, nodePid, true)
+
     if map_size(completedNodes) == noOfNodes do
-      timeGossip = System.monotonic_time(:microsecond) -startTime
+      timeGossip = System.monotonic_time(:microsecond) - startTime
       Logger.info("Gossip algorithm completed in time #{inspect(timeGossip)}microSeconds")
     end
-    {:noreply,{topology, noOfNodes, nodes, completedNodes, startTime} }
+
+    {:noreply, {topology, noOfNodes, nodes, completedNodes, startTime}}
   end
 
-  def handle_cast({:terminatePushSum, nodePid, avg}, {topology, noOfNodes, nodes, completedNodes, startTime}) do
+  def handle_cast(
+        {:terminatePushSum, nodePid, avg},
+        {topology, noOfNodes, nodes, completedNodes, startTime}
+      ) do
     # completedNodes = Map.put(completedNodes,nodePid,true)
     # if(Process.alive?(nodePid)) do
     #   GenServer.stop(nodePid,:normal)
     # end
     # if map_size(completedNodes) == noOfNodes do
-      stopNodes(nodes,0, noOfNodes)
-      timePushSum = System.monotonic_time(:microsecond) -startTime
-      Logger.info("PushSum algorithm completed in time #{inspect(timePushSum)}microSeconds and with average value #{inspect(avg)}")
+    stopNodes(nodes, 0, noOfNodes)
+    timePushSum = System.monotonic_time(:microsecond) - startTime
+
+    Logger.info(
+      "PushSum algorithm completed in time #{inspect(timePushSum)}microSeconds and with average value #{
+        inspect(avg)
+      }"
+    )
+
     # end
-    {:noreply,{topology, noOfNodes, nodes, completedNodes, startTime} }
+    {:noreply, {topology, noOfNodes, nodes, completedNodes, startTime}}
   end
 
   def stopNode(nodes, index) do
-
-      GenServer.stop(elem(nodes,index),:normal)
+    GenServer.stop(elem(nodes, index), :normal)
   end
 
   def stopNodes(nodes, index, size) do
-    if index != size-1 do
-      GenServer.stop(elem(nodes,index),:normal)
-      stopNodes(nodes, index+1, size)
+    nodePid= elem(nodes, index)
+    if index < size && Process.alive?(nodePid) do
+      GenServer.stop(nodePid, :normal)
+      stopNodes(nodes, index + 1, size)
     end
   end
 
-  def nodeMatrixFor3d(first,last,size,nodes,acc,n) when last<(n*size*size) do
-    vec = Enum.reduce(first..last, [], fn index,vector ->
-      vector = vector ++ [elem(nodes,index)]
-      end)
-    acc = acc ++ [vec]
-    first = last+1
-    last = last+size
-    nodeMatrixFor3d(first,last,size,nodes,acc,n)
-  end
-
-  def nodeMatrixFor3d(_,_,_,_,acc,_) do
-    acc
-  end
-
-  def combinedMatrixFor3d(size,nodes) do
-    Enum.reduce(0..(size-1),[], fn index,tensor3d ->
-      first = index*size*size
-      last = first+(size-1)
-      tensor3d = tensor3d ++ [nodeMatrixFor3d(first,last,size,nodes,[],index+1)]
-    end)
-  end
 end

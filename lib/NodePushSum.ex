@@ -28,7 +28,6 @@ defmodule PRJ2.NodePushSum do
     newS = s + incomingS
     newW = w + incomingW
     delta = abs(newS/newW - (s/w))
-    IO.inspect delta
     if(delta < :math.pow(10,-10) && count>=3) do
       GenServer.cast(:genMain, {:terminatePushSum, self(),s/w})
       {:noreply, {newS/2, newW/2, neighbours, count}}
