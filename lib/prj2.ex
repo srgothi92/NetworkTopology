@@ -31,7 +31,7 @@ defmodule PRJ2.Main do
   end
 
   def findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
-    case topology do
+    su = case topology do
       "line" ->
         cond do
           index==0 ->
@@ -58,8 +58,16 @@ defmodule PRJ2.Main do
           acc = {index+1,listNeigh}
         end)
         elem(neighbours,1)
-      
+      "impline" ->
+        index1 = :rand.uniform(noOfNodes)-1
+        [elem(nodes,index1)]
+      "3dmatrix" ->
+        Graphmath.Vec3.create()
+
       end
+      IO.inspect su
+      su
+
   end
 
   def startNodeGossip(acc) do
@@ -74,7 +82,7 @@ defmodule PRJ2.Main do
 
   def handle_cast({:startGossip, msg}, {noOfNodes, _, completedNodes}) do
     nodes = createNodesGossip(noOfNodes)
-    topology = "full";
+    topology = "impline";
     nodeCoordinates = if topology == "rand2d" do
       Enum.reduce(0..(noOfNodes-1), [],fn index,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
     else
@@ -135,4 +143,31 @@ defmodule PRJ2.Main do
   def handle_call(:getstate,_from,state) do
     {:reply,state,state}
   end
+
+  def nodeMatrixFor3d(first,last,size,nodes,acc,n) when last<=(n*size*size) do
+    IO.inspect n
+    IO.inspect first
+    IO.inspect last
+    vec = Enum.reduce(first..last, [], fn index,vector ->
+      vector = vector ++ [elem(nodes,index)] 
+      end)
+    acc = acc ++ [vec]
+    first = last+1
+    last = last+size
+    nodeMatrixFor3d(first,last,size,nodes,acc,n) 
+  end
+
+  def nodeMatrixFor3d(first,last,size,nodes,acc,n) do
+    acc
+  end
+
+  def combinedMatrixFor3d(size,nodes) do 
+    Enum.reduce(0..(size-1),[], fn index,tensor3d ->
+      first = index*size*size
+      last = first+(size-1)
+      tensor3d = tensor3d ++ [nodeMatrixFor3d(first,last,size,nodes,tensor3d,index+1)] 
+    end)
+  end
+
+  
 end
