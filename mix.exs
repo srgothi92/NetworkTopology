@@ -27,5 +27,5 @@ defmodule PRJ2.MixProject do
       {:tensor, "~> 2.0"}
     ]
   end
-  
+
 end

@@ -7,6 +7,7 @@ defmodule PRJ2.NodePushSum do
   end
 
   def init(inputs) do
+    Process.flag(:trap_exit, true)
     state = init_state(inputs)
     {:ok, state}
   end
@@ -28,14 +29,9 @@ defmodule PRJ2.NodePushSum do
     newW = w + incomingW
     delta = abs(newS/newW - (s/w))
     IO.inspect delta
-    # Logger.info("delta #{inspect(delta)}")
     if(delta < :math.pow(10,-10) && count>=3) do
-      # Logger.info("Node Converged #{inspect(self())}")
-      GenServer.call(:genMain, {:terminatePushSum, s/w})
-      # :init.stop()
-      # //{:stop, "Node Converged", {s,w,neighbours, count}}
-      # System.stop(0)
-      # GenServer.stop(self(), "Node Converged")
+      GenServer.cast(:genMain, {:terminatePushSum, self(),s/w})
+      {:noreply, {newS/2, newW/2, neighbours, count}}
     end
     count = if(delta < :math.pow(10,-10) && count < 3) do
       count + 1
@@ -44,11 +40,12 @@ defmodule PRJ2.NodePushSum do
       0
     end
     randNeighInd = :rand.uniform(length(neighbours))
+    # Forwarding Sum to a random node
     GenServer.cast(Enum.at(neighbours, randNeighInd-1), {:transmitSum, {newS/2,newW/2}})
     {:noreply, {newS/2, newW/2, neighbours, count}}
   end
 
-  def handle_call(:getstate, _from, state) do
-    {:reply, state, state}
+  def terminate(reason, state) do
+
   end
 end

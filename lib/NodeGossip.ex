@@ -33,19 +33,13 @@ defmodule PRJ2.NodeGossip do
     count =
       if count < 15 do
         randNeighInd = :rand.uniform(length(neighbours))
-        Logger.info("Node #{inspect(self())} count #{inspect(count)}}")
         GenServer.cast(Enum.at(neighbours, randNeighInd - 1), {:transmitMessage, message})
         Process.send_after(self(), :spreadRumor, 10)
         count + 1
       else
-        Logger.info("Node #{inspect(self())} converged}")
         GenServer.cast(:genMain, {:notify, self()})
         15
       end
     {:noreply, {message, neighbours, count}}
-  end
-
-  def handle_call(:getstate, _from, state) do
-    {:reply, state, state}
   end
 end

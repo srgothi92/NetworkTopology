@@ -1,17 +1,14 @@
 defmodule PRJ2.Main do
   use GenServer
   require Logger
+  require Tensor
 
   @moduledoc """
   Documentation for PRJ2.
   """
 
-  def start_link(noOfNodes) do
-    GenServer.start_link(__MODULE__,{noOfNodes},name: :genMain)
-  end
-
-  def getMain do
-    self()
+  def start_link(topology, noOfNodes) do
+    GenServer.start_link(__MODULE__,{topology, noOfNodes},name: :genMain)
   end
 
   def init(inputs) do
@@ -19,19 +16,33 @@ defmodule PRJ2.Main do
     {:ok, state}
   end
 
-  def init_state(inputs) do
-    noOfNodes = elem(inputs,0) || 5
-    nodes = []
+  defp init_state(inputs) do
+    topology = elem(inputs,0) || "full"
+    noOfNodes = elem(inputs,1) || 5
+    nodes = {}
     completedNodes = %{}
-    {noOfNodes, nodes, completedNodes}
+    startTime = 0
+    {topology, noOfNodes, nodes, completedNodes, startTime}
   end
 
-  def handle_call({:updateNodes, nodes}, _from, {noOfNodes, _}) do
-    {:reply, {noOfNodes, nodes}}
+  defp createTopology(topology, noOfNodes, nodes, algorithm) do
+    # Reset the nodes array if previously created
+    if tuple_size(nodes) > 0 do
+      stopNodes(nodes, 0, noOfNodes)
+    end
+    nodes = {}
+    nodes = if algorithm == "Gossip" do
+      createNodesGossip(noOfNodes)
+    else
+      createNodesPushSum(noOfNodes)
+    end
+    nodeCoordinates = preprocessing(noOfNodes,nodes, topology)
+    _ = Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "full",noOfNodes,nodeCoordinates)}) end)
+    nodes
   end
 
-  def findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
-    su = case topology do
+  defp findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates) do
+    case topology do
       "line" ->
         cond do
           index==0 ->
@@ -61,38 +72,42 @@ defmodule PRJ2.Main do
       "impline" ->
         index1 = :rand.uniform(noOfNodes)-1
         [elem(nodes,index1)]
-      "3dmatrix" ->
+      "3dGrid" ->
         Graphmath.Vec3.create()
 
       end
-      IO.inspect su
-      su
-
   end
 
-  def startNodeGossip(acc) do
+  defp startNodeGossip(acc) do
     newNode = PRJ2.NodeGossip.start_link({[]})
     Tuple.append(acc,elem(newNode,1))
   end
 
-  def createNodesGossip(noOfNodes) do
+  defp createNodesGossip(noOfNodes) do
     list = 0..(noOfNodes - 1)
-    Enum.reduce(list,{}, fn n,acc ->  startNodeGossip(acc) end)
+    Enum.reduce(list,{}, fn _,acc ->  startNodeGossip(acc) end)
   end
 
-  def handle_cast({:startGossip, msg}, {noOfNodes, _, completedNodes}) do
-    nodes = createNodesGossip(noOfNodes)
-    topology = "impline";
-    nodeCoordinates = if topology == "rand2d" do
-      Enum.reduce(0..(noOfNodes-1), [],fn index,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
-    else
-      []
+  defp preprocessing(noOfNodes,nodes, topology) do
+    case topology do
+      "rand2d" ->
+        Enum.reduce(0..(noOfNodes-1), [],fn _,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
+      "3dGrid" ->
+        Tensor.new(combinedMatrixFor3d(2,nodes))
+      _ ->
+          []
     end
-    Enum.each(0..(noOfNodes-1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, topology,noOfNodes,nodeCoordinates)}) end)
+  end
+
+  def handle_cast({:startGossip, msg}, {topology, noOfNodes, nodes, completedNodes, _}) do
+    startTopologyCreation = System.monotonic_time(:microsecond)
+    nodes = createTopology(topology, noOfNodes, nodes, "Gossip")
+    topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
+    Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
+    startGossip = System.monotonic_time(:microsecond)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
-    IO.inspect randNodeIndex
-    GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, "Su is too scared of ghost, and she won't sleep for 7 days alone."})
-    {:noreply, {noOfNodes, nodes, completedNodes}}
+    GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, msg})
+    {:noreply, {topology, noOfNodes, nodes, completedNodes, startGossip}}
   end
 
   def startNodePushSum(acc, index) do
@@ -105,43 +120,49 @@ defmodule PRJ2.Main do
     Enum.reduce(list,{}, fn n,acc ->  startNodePushSum(acc, n) end)
   end
 
-  def handle_cast({:startPushSum, s, w}, {noOfNodes, _, completedNodes}) do
-    nodes = createNodesPushSum(noOfNodes)
-    topology = "rand2d";
-    nodeCoordinates = if topology == "rand2d" do
-      Enum.reduce(0..(noOfNodes-1), [],fn index,acc -> acc = [{:rand.uniform(),:rand.uniform()}] ++ acc end)
-    end
-    Enum.each(0..(noOfNodes - 1), fn index -> GenServer.cast(elem(nodes,index), {:updateNeighbours, findNeighbours(index, nodes, "full",noOfNodes,nodeCoordinates)}) end)
+  def handle_cast({:startPushSum, s, w}, {topology, noOfNodes, nodes, completedNodes, _}) do
+    startTopologyCreation = System.monotonic_time(:microsecond)
+    nodes = createTopology(topology, noOfNodes, nodes, "PushSum")
+    topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
+    Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
+    startTimePushSum = System.monotonic_time(:microsecond)
     randNodeIndex = :rand.uniform(noOfNodes) - 1
-    IO.inspect randNodeIndex
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitSum, {s, w}})
-    {:noreply, {noOfNodes, nodes, completedNodes}}
+    {:noreply, {topology, noOfNodes, nodes, completedNodes, startTimePushSum}}
   end
 
-  def handle_cast({:notify, nodePId}, {noOfNodes, nodes, completedNodes}) do
-    completedNodes = Map.put(completedNodes,nodePId,true)
-    IO.inspect(completedNodes)
+  def handle_cast({:notify, nodePid}, {topology, noOfNodes, nodes, completedNodes, startTime}) do
+    completedNodes = Map.put(completedNodes,nodePid,true)
     if map_size(completedNodes) == noOfNodes do
-      IO.inspect "Convergance"
+      timeGossip = System.monotonic_time(:microsecond) -startTime
+      Logger.info("Gossip algorithm completed in time #{inspect(timeGossip)}microSeconds")
     end
-    {:noreply,{noOfNodes, nodes, completedNodes} }
+    {:noreply,{topology, noOfNodes, nodes, completedNodes, startTime} }
   end
 
-  def handle_call({:terminatePushSum, avg}, _, {noOfNodes, nodes, completedNodes}) do
-    stopNodes(nodes, 0, noOfNodes)
-    Logger.info("PushSum algorithm completed with average value #{inspect(avg)}")
-    {:noreply,{noOfNodes, nodes, completedNodes} }
+  def handle_cast({:terminatePushSum, nodePid, avg}, {topology, noOfNodes, nodes, completedNodes, startTime}) do
+    # completedNodes = Map.put(completedNodes,nodePid,true)
+    # if(Process.alive?(nodePid)) do
+    #   GenServer.stop(nodePid,:normal)
+    # end
+    # if map_size(completedNodes) == noOfNodes do
+      stopNodes(nodes,0, noOfNodes)
+      timePushSum = System.monotonic_time(:microsecond) -startTime
+      Logger.info("PushSum algorithm completed in time #{inspect(timePushSum)}microSeconds and with average value #{inspect(avg)}")
+    # end
+    {:noreply,{topology, noOfNodes, nodes, completedNodes, startTime} }
+  end
+
+  def stopNode(nodes, index) do
+
+      GenServer.stop(elem(nodes,index),:normal)
   end
 
   def stopNodes(nodes, index, size) do
     if index != size-1 do
-      GenServer.stop(elem(nodes,index),"Converged")
+      GenServer.stop(elem(nodes,index),:normal)
       stopNodes(nodes, index+1, size)
     end
-  end
-
-  def handle_call(:getstate,_from,state) do
-    {:reply,state,state}
   end
 
   def nodeMatrixFor3d(first,last,size,nodes,acc,n) when last<(n*size*size) do
@@ -154,7 +175,7 @@ defmodule PRJ2.Main do
     nodeMatrixFor3d(first,last,size,nodes,acc,n)
   end
 
-  def nodeMatrixFor3d(first,last,size,nodes,acc,n) do
+  def nodeMatrixFor3d(_,_,_,_,acc,_) do
     acc
   end
 
@@ -165,6 +186,4 @@ defmodule PRJ2.Main do
       tensor3d = tensor3d ++ [nodeMatrixFor3d(first,last,size,nodes,[],index+1)]
     end)
   end
-
-
 end
