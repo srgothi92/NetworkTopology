@@ -144,30 +144,27 @@ defmodule PRJ2.Main do
     {:reply,state,state}
   end
 
-  def nodeMatrixFor3d(first,last,size,nodes,acc,n) when last<=(n*size*size) do
-    IO.inspect n
-    IO.inspect first
-    IO.inspect last
+  def nodeMatrixFor3d(first,last,size,nodes,acc,n) when last<(n*size*size) do
     vec = Enum.reduce(first..last, [], fn index,vector ->
-      vector = vector ++ [elem(nodes,index)] 
+      vector = vector ++ [elem(nodes,index)]
       end)
     acc = acc ++ [vec]
     first = last+1
     last = last+size
-    nodeMatrixFor3d(first,last,size,nodes,acc,n) 
+    nodeMatrixFor3d(first,last,size,nodes,acc,n)
   end
 
   def nodeMatrixFor3d(first,last,size,nodes,acc,n) do
     acc
   end
 
-  def combinedMatrixFor3d(size,nodes) do 
+  def combinedMatrixFor3d(size,nodes) do
     Enum.reduce(0..(size-1),[], fn index,tensor3d ->
       first = index*size*size
       last = first+(size-1)
-      tensor3d = tensor3d ++ [nodeMatrixFor3d(first,last,size,nodes,tensor3d,index+1)] 
+      tensor3d = tensor3d ++ [nodeMatrixFor3d(first,last,size,nodes,[],index+1)]
     end)
   end
 
-  
+
 end
