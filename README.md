@@ -15,7 +15,16 @@ To run the code for this project, simply run in your terminal:
 
 ```elixir
 $ mix compile
-$
+$ iex main = PRJ2.Main.start_link(<topology>,<noOfNodes>)
+$ iex GenServer.cast(<mainPid>,{:startPushSum,<s>,<w>})
+$ iex GenServer.cast(<mainPid>,{:startGossip,<message>})
+```
+Example:
+```elixir
+$ mix compile
+$ iex main = PRJ2.Main.start_link("3dGrid",50)
+$ iex GenServer.cast(elem(main,1),{:startPushSum,0,0})
+$ iex GenServer.cast(elem(main,1),{:startGossip,"blah blah"})
 ```
 
 ## Tests
