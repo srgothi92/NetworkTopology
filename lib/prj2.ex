@@ -87,7 +87,6 @@ defmodule PRJ2.Main do
   end
 
   defp findNeighbours(index, nodes, topology, noOfNodes, nodeCoordinates) do
-    su =
       case topology do
         "line" ->
           cond do
@@ -197,8 +196,6 @@ defmodule PRJ2.Main do
           neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col + 1, size))]
           neighbours
       end
-
-    IO.inspect(su)
   end
 
   defp createTopology(topology, noOfNodes, nodes, algorithm) do
@@ -208,13 +205,13 @@ defmodule PRJ2.Main do
     end
 
     nodes = {}
-
     nodes =
       if algorithm == "Gossip" do
         createNodesGossip(noOfNodes)
       else
         createNodesPushSum(noOfNodes)
       end
+      Logger.info("Nodes Created")
 
     data = preprocessing(noOfNodes, nodes, topology)
     nodePositions = elem(data, 0)
@@ -237,8 +234,7 @@ defmodule PRJ2.Main do
   end
 
   defp createNodesGossip(noOfNodes) do
-    list = 0..(noOfNodes - 1)
-    Enum.reduce(list, {}, fn _, acc -> startNodeGossip(acc) end)
+    Enum.reduce(0..(noOfNodes-1), {}, fn _Y, acc -> startNodeGossip(acc) end)
   end
 
   defp sphereColumn(nodes, index, size) do
@@ -277,8 +273,7 @@ defmodule PRJ2.Main do
   Creates node for Push-Sum algorithm.
   """
   def createNodesPushSum(noOfNodes) do
-    list = 0..(noOfNodes - 1)
-    Enum.reduce(list, {}, fn n, acc -> startNodePushSum(acc, n) end)
+    Enum.reduce(0..(noOfNodes-1), {}, fn n, acc -> startNodePushSum(acc, n) end)
   end
 
   @doc """
@@ -351,9 +346,9 @@ defmodule PRJ2.Main do
   Stops all the nodes.
   """
   def stopNodes(nodes, index, size) do
-    nodePid = elem(nodes, index)
 
-    if index < size && Process.alive?(nodePid) do
+    if index < size && Process.alive?(elem(nodes, index)) do
+      nodePid = elem(nodes, index)
       GenServer.stop(nodePid, :normal)
       stopNodes(nodes, index + 1, size)
     end
