@@ -43,8 +43,4 @@ defmodule PRJ2.NodePushSum do
     GenServer.cast(Enum.at(neighbours, randNeighInd-1), {:transmitSum, {newS/2,newW/2}})
     {:noreply, {newS/2, newW/2, neighbours, count}}
   end
-
-  def terminate(reason, state) do
-
-  end
 end

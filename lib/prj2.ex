@@ -1,7 +1,7 @@
 defmodule PRJ2.Main do
   use GenServer
   require Logger
-  require Tensor
+  use Tensor
 
   @moduledoc """
   Documentation for PRJ2.
@@ -61,7 +61,7 @@ defmodule PRJ2.Main do
         {nodePositions, noOfNodes}
 
       "3dGrid" ->
-        size = Kernel.trunc(:math.pow(26, 1 / 3))
+        size = Kernel.trunc(:math.pow(noOfNodes, 1 / 3))
         nodePositions = Tensor.new(combinedMatrixFor3d(size, nodes))
         {nodePositions, size * size * size}
 
@@ -81,69 +81,118 @@ defmodule PRJ2.Main do
   end
 
   defp findNeighbours(index, nodes, topology, noOfNodes, nodeCoordinates) do
-    IO.inspect topology
-    su = case topology do
-      "line" ->
-        cond do
-          index == 0 ->
-            [elem(nodes, index + 1)]
+    su =
+      case topology do
+        "line" ->
+          cond do
+            index == 0 ->
+              [elem(nodes, index + 1)]
 
-          index == noOfNodes - 1 ->
-            [elem(nodes, index - 1)]
+            index == noOfNodes - 1 ->
+              [elem(nodes, index - 1)]
 
-          true ->
-            [elem(nodes, index + 1), elem(nodes, index - 1)]
-        end
+            true ->
+              [elem(nodes, index + 1), elem(nodes, index - 1)]
+          end
 
-      "full" ->
-        nodeList = Tuple.to_list(nodes)
-        List.delete_at(nodeList, index)
+        "full" ->
+          nodeList = Tuple.to_list(nodes)
+          List.delete_at(nodeList, index)
 
-      "rand2d" ->
-        currentNodeCoordinate = Enum.at(nodeCoordinates, index)
+        "rand2d" ->
+          currentNodeCoordinate = Enum.at(nodeCoordinates, index)
 
-        neighbours =
-          Enum.reduce(nodeCoordinates, {0, []}, fn iteratingNode, acc ->
-            dist =
-              :math.sqrt(
-                :math.pow(elem(currentNodeCoordinate, 1) - elem(iteratingNode, 1), 2) +
-                  :math.pow(elem(currentNodeCoordinate, 0) - elem(iteratingNode, 0), 2)
-              )
+          neighbours =
+            Enum.reduce(nodeCoordinates, {0, []}, fn iteratingNode, acc ->
+              dist =
+                :math.sqrt(
+                  :math.pow(elem(currentNodeCoordinate, 1) - elem(iteratingNode, 1), 2) +
+                    :math.pow(elem(currentNodeCoordinate, 0) - elem(iteratingNode, 0), 2)
+                )
 
-            index = elem(acc, 0)
-            listNeigh = elem(acc, 1)
+              index = elem(acc, 0)
+              listNeigh = elem(acc, 1)
 
-            listNeigh =
-              if dist < 0.1 do
-                listNeigh ++ [elem(nodes, index)]
-              else
-                listNeigh
-              end
+              listNeigh =
+                if dist < 0.1 do
+                  listNeigh ++ [elem(nodes, index)]
+                else
+                  listNeigh
+                end
 
-            acc = {index + 1, listNeigh}
-          end)
+              acc = {index + 1, listNeigh}
+            end)
 
-        elem(neighbours, 1)
+          elem(neighbours, 1)
 
-      "impline" ->
-        index1 = :rand.uniform(noOfNodes) - 1
-        [elem(nodes, index1)]
+        "impline" ->
+          index1 = :rand.uniform(noOfNodes) - 1
+          [elem(nodes, index1)]
 
-      "3dGrid" ->
-        []
+        "3dGrid" ->
+          neighbours = []
+          size = Kernel.trunc(:math.pow(noOfNodes, 1 / 3))
+          x = rem(div(index, size), size)
+          y = rem(index, size)
+          z = div(index, size * size)
 
-      "sphere" ->
-        neighbours = []
-        size = Kernel.trunc(:math.sqrt(noOfNodes))
-        row = div(index, size)
-        col = rem(index, size)
-        neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row+size-1,size)), col)]
-        neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col+size-1,size))]
-        neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row + 1, size)), col)]
-        neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col + 1, size))]
-        neighbours
-    end
-    IO.inspect su
+          neighbours =
+            if x + 1 < size do
+              neighbours ++ [nodeCoordinates[x + 1][y][z]]
+            else
+              neighbours
+            end
+
+          neighbours =
+            if(y + 1 < size) do
+              neighbours ++ [nodeCoordinates[x][y + 1][z]]
+            else
+              neighbours
+            end
+
+          neighbours =
+            if(z + 1 < size) do
+              neighbours ++ [nodeCoordinates[x][y][z + 1]]
+            else
+              neighbours
+            end
+
+          neighbours =
+            if(x - 1 >= 0) do
+              neighbours ++ [nodeCoordinates[x - 1][y][z]]
+            else
+              neighbours
+            end
+
+          neighbours =
+            if(y - 1 >= 0) do
+              neighbours ++ [nodeCoordinates[x][y - 1][z]]
+            else
+              neighbours
+            end
+
+          neighbours =
+            if(z - 1 >= 0) do
+              neighbours ++ [nodeCoordinates[x][y][z - 1]]
+            else
+              neighbours
+            end
+
+          neighbours
+
+        "sphere" ->
+          neighbours = []
+          size = Kernel.trunc(:math.sqrt(noOfNodes))
+          row = div(index, size)
+          col = rem(index, size)
+          neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row + size - 1, size)), col)]
+          neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col + size - 1, size))]
+          neighbours = neighbours ++ [elem(elem(nodeCoordinates, rem(row + 1, size)), col)]
+          neighbours = neighbours ++ [elem(elem(nodeCoordinates, row), rem(col + 1, size))]
+          neighbours
+      end
+
+    IO.inspect(su)
   end
 
   defp createTopology(topology, noOfNodes, nodes, algorithm) do
@@ -164,7 +213,7 @@ defmodule PRJ2.Main do
     data = preprocessing(noOfNodes, nodes, topology)
     nodePositions = elem(data, 0)
     noOfNodes = elem(data, 1)
-    IO.inspect nodePositions
+
     _ =
       Enum.each(0..(noOfNodes - 1), fn index ->
         GenServer.cast(
@@ -195,8 +244,8 @@ defmodule PRJ2.Main do
   def handle_cast({:startGossip, msg}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
     topologyData = createTopology(topology, noOfNodes, nodes, "Gossip")
-    nodes = elem(topologyData,0)
-    noOfNodes = elem(topologyData,1)
+    nodes = elem(topologyData, 0)
+    noOfNodes = elem(topologyData, 1)
     topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
     Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
     startGossip = System.monotonic_time(:microsecond)
@@ -218,8 +267,8 @@ defmodule PRJ2.Main do
   def handle_cast({:startPushSum, s, w}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
     topologyData = createTopology(topology, noOfNodes, nodes, "PushSum")
-    nodes = elem(topologyData,0)
-    noOfNodes = elem(topologyData,1)
+    nodes = elem(topologyData, 0)
+    noOfNodes = elem(topologyData, 1)
     topologyCreationTime = System.monotonic_time(:microsecond) - startTopologyCreation
     Logger.info("Time to create Topology: #{inspect(topologyCreationTime)}microseconds")
     startTimePushSum = System.monotonic_time(:microsecond)
@@ -266,11 +315,11 @@ defmodule PRJ2.Main do
   end
 
   def stopNodes(nodes, index, size) do
-    nodePid= elem(nodes, index)
+    nodePid = elem(nodes, index)
+
     if index < size && Process.alive?(nodePid) do
       GenServer.stop(nodePid, :normal)
       stopNodes(nodes, index + 1, size)
     end
   end
-
 end
