@@ -1,6 +1,6 @@
 # Gossip Simulator
 
-**The program implements Gossip and Push-Sum algorithm for Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line topologies. It takes the number of nodes, topology and alogirthm as input. Based on the type of topology, it computes the neighbours and passes the message to a random neighbour.**
+**The program implements Gossip and Push-Sum algorithm for Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line topologies. It takes the number of nodes, topology and algorithm as input. Based on the type of topology, it computes the neighbours and passes the message to a random neighbour.**
 
 ## Group Info
 
