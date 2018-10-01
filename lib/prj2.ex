@@ -4,13 +4,19 @@ defmodule PRJ2.Main do
   use Tensor
 
   @moduledoc """
-  Documentation for PRJ2.
+  Creates topology, finds and updates the neighbours of each node.
+  Transmits message or s,w based on the type of algorithm to random neighbours.
   """
-
+  @doc """
+  Starts the GenServer.
+  """
   def start_link(topology, noOfNodes, bonus \\ false) do
     GenServer.start_link(__MODULE__, {topology, noOfNodes, bonus}, name: :genMain)
   end
 
+  @doc """
+  Initiates the state of the GenServer.
+  """
   def init(inputs) do
     state = init_state(inputs)
     {:ok, state}
@@ -241,6 +247,11 @@ defmodule PRJ2.Main do
     end)
   end
 
+  @doc """
+  Creates topology and starts the gossip algorithm.
+  Prints the time taken to create the topology.
+  Transmits message to random neighbours.
+  """
   def handle_cast({:startGossip, msg}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
     topologyData = createTopology(topology, noOfNodes, nodes, "Gossip")
@@ -254,16 +265,27 @@ defmodule PRJ2.Main do
     {:noreply, {topology, noOfNodes, nodes, completedNodes, startGossip}}
   end
 
+  @doc """
+  Starts node for Push-Sum algorithm.
+  """
   def startNodePushSum(acc, index) do
     newNode = PRJ2.NodePushSum.start_link({index + 1, 1})
     Tuple.append(acc, elem(newNode, 1))
   end
 
+  @doc """
+  Creates node for Push-Sum algorithm.
+  """
   def createNodesPushSum(noOfNodes) do
     list = 0..(noOfNodes - 1)
     Enum.reduce(list, {}, fn n, acc -> startNodePushSum(acc, n) end)
   end
 
+  @doc """
+  Creates topology and starts the Push-Sum algorithm.
+  Prints the time taken to create the topology.
+  Transmits s and w to random neighbour.
+  """
   def handle_cast({:startPushSum, s, w}, {topology, noOfNodes, nodes, completedNodes, _}) do
     startTopologyCreation = System.monotonic_time(:microsecond)
     topologyData = createTopology(topology, noOfNodes, nodes, "PushSum")
@@ -277,6 +299,10 @@ defmodule PRJ2.Main do
     {:noreply, {topology, noOfNodes, nodes, completedNodes, startTimePushSum}}
   end
 
+  @doc """
+  Checks if all the nodes are converged in Gossip algorithm and terminates it.
+  Prints the time taken to complete the algorithm.
+  """
   def handle_cast({:notify, nodePid}, {topology, noOfNodes, nodes, completedNodes, startTime}) do
     completedNodes = Map.put(completedNodes, nodePid, true)
 
@@ -288,6 +314,10 @@ defmodule PRJ2.Main do
     {:noreply, {topology, noOfNodes, nodes, completedNodes, startTime}}
   end
 
+  @doc """
+  Terminates Push-Sum algorithm.
+  Prints the time taken to complete the Push-Sum algorithm and the average value.
+  """
   def handle_cast(
         {:terminatePushSum, nodePid, avg},
         {topology, noOfNodes, nodes, completedNodes, startTime}
@@ -310,10 +340,16 @@ defmodule PRJ2.Main do
     {:noreply, {topology, noOfNodes, nodes, completedNodes, startTime}}
   end
 
+  @doc """
+  Stops a single node at given index.
+  """
   def stopNode(nodes, index) do
     GenServer.stop(elem(nodes, index), :normal)
   end
 
+  @doc """
+  Stops all the nodes.
+  """
   def stopNodes(nodes, index, size) do
     nodePid = elem(nodes, index)
 

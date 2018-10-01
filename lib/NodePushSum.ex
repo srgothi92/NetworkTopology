@@ -1,17 +1,29 @@
 defmodule PRJ2.NodePushSum do
   use GenServer
   require Logger
-
+  
+  @moduledoc """
+  Node of the topology for Push-Sum algorithm.
+  """
+  @doc """
+  Starts the GenServer.
+  """
   def start_link(inputs) do
     GenServer.start_link(__MODULE__, inputs)
   end
 
+  @doc """
+  Initiates the state of the GenServer.
+  """
   def init(inputs) do
     Process.flag(:trap_exit, true)
     state = init_state(inputs)
     {:ok, state}
   end
 
+  @doc """
+  Returns `{s,w,neighbours,count}` 
+  """
   def init_state(inputs) do
     s = elem(inputs, 0) || 0
     w = elem(inputs, 1) || 0
@@ -20,10 +32,18 @@ defmodule PRJ2.NodePushSum do
     {s, w, neighbours,count}
   end
 
+  @doc """
+  Update the neighbour in GenServer state
+  """
   def handle_cast({:updateNeighbours, newNeighbour}, {s, w, _, count}) do
     {:noreply, {s, w, newNeighbour,count}}
   end
 
+  @doc """
+  Calculates the s and w value and forwards to a random node.
+  Terminates the transmission if the ratio of s/w does not change 
+  more than pow(10,-10) for 3 consecutive rounds.
+  """
   def handle_cast({:transmitSum, {incomingS, incomingW}}, {s,w,neighbours, count}) do
     newS = s + incomingS
     newW = w + incomingW
