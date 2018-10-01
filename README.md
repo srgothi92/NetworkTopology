@@ -1,21 +1,46 @@
-# PRJ2
+# Gossip Simulator
 
-**TODO: Add description**
+**The program implements Gossip and Push-Sum algorithm for Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line topologies. It takes the number of nodes, topology and alogirthm as input. Based on the type of topology, it computes the neighbours and passes the message to a random neighbour.**
 
-## Installation
+## Group Info
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `prj2` to your list of dependencies in `mix.exs`:
+UFID: 8115-5459 Shaileshbhai Revabhai Gothi
+
+
+UFID: 8916-9425 Sivani Sri Sruthi Korukonda
+
+## Instructions
+
+To run the code for this project, simply run in your terminal:
 
 ```elixir
-def deps do
-  [
-    {:prj2, "~> 0.1.0"}
-  ]
-end
+$ mix compile
+$
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/prj2](https://hexdocs.pm/prj2).
+## Tests
+
+To run the tests for this project, simply run in your terminal:
+
+```elixir
+$ mix test
+```
+
+## What is working
+
+1. All the five topologies namely Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line are implemented for both Gossip and Push-Sum.
+2. 100% convergence is achieved for gossip for all topologies.
+
+## Largest Network implemented:
+
+
+## Documentation
+
+To generate the documentation, run the following command in your terminal:
+
+```elixir
+$ mix docs
+```
+This will generate a doc/ directory with a documentation in HTML. 
+To view the documentation, open the index.html file in the generated directory.
 
