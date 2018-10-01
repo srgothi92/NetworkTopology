@@ -37,7 +37,7 @@ $ mix test
 
 ## What is working
 
-1. All the five topologies namely Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line are implemented for both Gossip and Push-Sum.
+1. All the six topologies namely Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line are implemented for both Gossip and Push-Sum.
 2. 100% convergence is achieved for gossip for all topologies.
 
 ## Largest Network implemented:
