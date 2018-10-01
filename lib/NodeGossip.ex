@@ -1,7 +1,7 @@
 defmodule PRJ2.NodeGossip do
   use GenServer
   require Logger
-  
+
   @moduledoc """
   Node of the topology for Gossip algorithm.
   """
@@ -32,7 +32,7 @@ defmodule PRJ2.NodeGossip do
   end
 
   @doc """
-  Updates the neighbours.
+  Updates the neighbours of Node.
   """
   def handle_cast({:updateNeighbours, newNeighbour}, {msg, _, count}) do
     {:noreply, {msg, newNeighbour, count}}
