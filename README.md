@@ -39,29 +39,64 @@ $ mix test
 
 1. All the six topologies namely Full Network,3D Grid,Random 2D Grid,Line,Sphere,Imperfect Line are implemented for both Gossip and Push-Sum.
 2. Convergance rate for each topology :
+
+
    a. Full : 100%
+   
+   
    b. 3dGrid : 100%
+   
+   
    c. Random2D : Starts converging after 300 nodes (for Gossip algorithm only)
+   
+   
    d. Sphere : 100%
+   
+   
    e. Line : 100%
+   
+   
    f. Imperfect Line : 100%
 
 ## Largest Network implemented:
 
 The largest network implemented for each topology is as follows for Gossip (for reasonable amount of time):
+   
+   
    a. Full : 20000
+   
+   
    b. 3dGrid : 50000
+   
+   
    c. Random2D : 10000
+   
+   
    d. Sphere : 50000
+   
+   
    e. Line : 10000
+   
+   
    f. Imperfect Line : 40000
    
 The largest network implemented for each topology is as follows for PushSum (for reasonable amount of time):
+   
+   
    a. Full : 4000
+   
+   
    b. 3dGrid : 4000
+   
+   
    c. Random2D : 15000
+   
+   
    d. Sphere : 3000
+   
    e. Line : 
+   
+   
    f. Imperfect Line : 
 
 ## Documentation
