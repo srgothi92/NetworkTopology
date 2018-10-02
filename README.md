@@ -10,6 +10,7 @@ UFID: 8115-5459 Shaileshbhai Revabhai Gothi
 UFID: 8916-9425 Sivani Sri Sruthi Korukonda
 
 ## Instructions
+Valid values for topology: "sphere", "3dGrid", "line", "impline", "rand2d", "full"
 
 To run the code for this project, simply run in your terminal:
 
@@ -23,6 +24,21 @@ Example:
 ```elixir
 $ mix compile
 $ iex main = PRJ2.Main.start_link("3dGrid",50)
+$ iex GenServer.cast(elem(main,1),{:startPushSum,0,0})
+$ iex GenServer.cast(elem(main,1),{:startGossip,"blah blah"})
+
+To run the code for the bonus part, simply run in your terminal:
+
+```elixir
+$ mix compile
+$ iex main = PRJ2.Main.start_link(<topology>,<noOfNodes>, <bonus?>, <MaxNodesToKill>,<TimeInterval>)
+$ iex GenServer.cast(<mainPid>,{:startPushSum,<s>,<w>})
+$ iex GenServer.cast(<mainPid>,{:startGossip,<message>})
+```
+Example:
+```elixir
+$ mix compile
+$ iex main = PRJ2.Main.start_link("3dGrid",50, true, 5, 10)
 $ iex GenServer.cast(elem(main,1),{:startPushSum,0,0})
 $ iex GenServer.cast(elem(main,1),{:startGossip,"blah blah"})
 ```
