@@ -58,9 +58,19 @@ defmodule PRJ2.NodePushSum do
     count = if(delta > :math.pow(10,-10)) do
       0
     end
-    randNeighInd = :rand.uniform(length(neighbours))
+    node = findLiveRandNeig(neighbours)
     # Forwarding Sum to a random node
-    GenServer.cast(Enum.at(neighbours, randNeighInd-1), {:transmitSum, {newS/2,newW/2}})
+    GenServer.cast(node, {:transmitSum, {newS/2,newW/2}})
     {:noreply, {newS/2, newW/2, neighbours, count}}
+  end
+
+  defp findLiveRandNeig(neighbours) do
+    randNeighInd = :rand.uniform(length(neighbours))
+    node = Enum.at(neighbours, randNeighInd-1)
+    if(Process.alive?(node)) do
+      node
+    else
+      findLiveRandNeig(neighbours)
+    end
   end
 end
