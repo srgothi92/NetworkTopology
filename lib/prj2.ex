@@ -141,13 +141,20 @@ defmodule PRJ2.Main do
         elem(neighbours, 1)
 
       "impline" ->
-        index1 = :rand.uniform(noOfNodes) - 1
-        [elem(nodes, index1)]
+        cond do
+          index == noOfNodes - 1 ->
+            randIndex = :rand.uniform(noOfNodes) - 1
+            [elem(nodes, randIndex), elem(nodes, 0)]
+
+          true ->
+            randIndex = :rand.uniform(noOfNodes) - 1
+            [elem(nodes, randIndex), elem(nodes, index + 1)]
+        end
 
       "3dGrid" ->
         # Find the negibours from the Nodes arranged in 3dGrid form
         neighbours = []
-        size = Kernel.trunc(:math.pow(noOfNodes+1, 1 / 3))
+        size = Kernel.trunc(:math.pow(noOfNodes + 1, 1 / 3))
         # Co ordinate of Node at index in the 3d Grid
         x = rem(div(index, size), size)
         y = rem(index, size)
@@ -200,7 +207,7 @@ defmodule PRJ2.Main do
       "sphere" ->
         # Find the negibours from the Nodes arranged in Matrix form
         neighbours = []
-        size = Kernel.trunc(:math.sqrt(noOfNodes+1))
+        size = Kernel.trunc(:math.sqrt(noOfNodes + 1))
         # Co-ordinates of Node at index in 2d Matrix
         row = div(index, size)
         col = rem(index, size)
@@ -212,7 +219,7 @@ defmodule PRJ2.Main do
     end
   end
 
- @doc """
+  @doc """
   Creates topology with the given input of topology- {"line","full", "3dGrid", "rand2d", "sphere", "impline"}
   Number of Nodes, Nodes List and type of algortihm {"Gossip", "PushSum"}
   """
@@ -283,7 +290,6 @@ defmodule PRJ2.Main do
     GenServer.cast(elem(nodes, randNodeIndex), {:transmitMessage, msg})
 
     if bonus == true do
-      Logger.info("inside bonus")
       Process.send_after(self(), :killRandomNode, timeInterval)
     end
 
@@ -343,7 +349,6 @@ defmodule PRJ2.Main do
         {topology, noOfNodes, nodes, completedNodes, startTime, bonus, nodesToKill, timeInterval}
       ) do
     completedNodes = Map.put(completedNodes, nodePid, true)
-    IO.inspect(map_size(completedNodes))
 
     nodesToKill =
       if map_size(completedNodes) == noOfNodes do
@@ -374,6 +379,7 @@ defmodule PRJ2.Main do
         inspect(avg)
       }"
     )
+
     {:noreply,
      {topology, noOfNodes, nodes, completedNodes, startTime, bonus, nodesToKill, timeInterval}}
   end
