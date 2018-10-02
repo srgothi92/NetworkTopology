@@ -94,10 +94,11 @@ The largest network implemented for each topology is as follows for PushSum (for
    
    d. Sphere : 3000
    
-   e. Line : 
+   
+   e. Line : 1000 
    
    
-   f. Imperfect Line : 
+   f. Imperfect Line : 5000
 
 ## Documentation
 
